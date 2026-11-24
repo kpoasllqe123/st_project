@@ -68,4 +68,4 @@
 code/main.py 실행. 필요한 라이브러리는 requirements.txt.
 
 ## 배포(선택)
-스트림릿 주소:
+스트림릿 주소: https://stproject-w9jhsfgrcwgmdg8qrxffvz.streamlit.app/
