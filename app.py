@@ -234,3 +234,53 @@ if "smoking_status" in df.columns and "age" in df.columns:
     st.plotly_chart(fig_age_comp, use_container_width=True)
 else:
     st.warning("현재 데이터에 smoking_status 또는 age 열이 없습니다.")
+st.divider()
+
+# 8. stroke(뇌졸중 여부) 1인 사람의 수와 비율 및 원그래프
+st.subheader("8. stroke(뇌졸중 여부) 분포 및 비율")
+
+if "stroke" in df.columns:
+    stroke_series = pd.to_numeric(df["stroke"], errors="coerce").dropna().astype(int)
+    total_count = len(stroke_series)
+    stroke_1_count = int((stroke_series == 1).sum())
+    stroke_0_count = int((stroke_series == 0).sum())
+
+    stroke_1_ratio = (stroke_1_count / total_count * 100) if total_count > 0 else 0
+    stroke_0_ratio = (stroke_0_count / total_count * 100) if total_count > 0 else 0
+
+    # 핵심 지표 카드
+    s_col1, s_col2, s_col3 = st.columns(3)
+    s_col1.metric("전체 인원수", f"{total_count:,}명")
+    s_col2.metric("stroke = 1 (발생) 인원수", f"{stroke_1_count:,}명")
+    s_col3.metric("stroke = 1 비율", f"{stroke_1_ratio:.2f}%")
+
+    # 요약 표 데이터
+    stroke_df = pd.DataFrame({
+        "구분": ["stroke = 0 (미발생)", "stroke = 1 (발생)"],
+        "인원수(명)": [stroke_0_count, stroke_1_count],
+        "비율(%)": [round(stroke_0_ratio, 2), round(stroke_1_ratio, 2)]
+    })
+
+    pie_left, pie_right = st.columns([1, 2])
+
+    with pie_left:
+        st.markdown("**stroke 값별 인원수 및 비율 표**")
+        st.table(stroke_df)
+
+    with pie_right:
+        st.markdown("**stroke 비율 원그래프**")
+        fig_pie = px.pie(
+            stroke_df,
+            names="구분",
+            values="인원수(명)",
+            color="구분",
+            color_discrete_map={
+                "stroke = 0 (미발생)": "#636EFA",
+                "stroke = 1 (발생)": "#EF553B"
+            },
+            title="전체 데이터 중 stroke(0 vs 1) 비율"
+        )
+        fig_pie.update_traces(textinfo="label+percent+value")
+        st.plotly_chart(fig_pie, use_container_width=True)
+else:
+    st.warning("현재 데이터에 stroke 열이 없습니다.")
