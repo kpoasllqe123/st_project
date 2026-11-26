@@ -179,3 +179,58 @@ if available_cat_cols:
         st.plotly_chart(fig_cat, use_container_width=True)
 else:
     st.warning("현재 데이터에 gender, smoking_status, work_type 열이 없습니다.")
+
+st.divider()
+
+# 7. smoking_status 'Unknown' vs 나머지 그룹 나이(age) 비교
+st.subheader("7. smoking_status 'Unknown' 그룹과 나머지 그룹의 나이(age) 비교")
+
+if "smoking_status" in df.columns and "age" in df.columns:
+    # 분석용 복사본 생성 및 그룹 구분
+    comp_df = df.copy()
+    comp_df["age"] = pd.to_numeric(comp_df["age"], errors="coerce")
+    comp_df = comp_df.dropna(subset=["age"])
+
+    comp_df["흡연상태_구분"] = comp_df["smoking_status"].apply(
+        lambda x: "Unknown (미상)" if str(x).strip() == "Unknown" else "나머지 (응답 있음)"
+    )
+
+    unknown_age = comp_df[comp_df["흡연상태_구분"] == "Unknown (미상)"]["age"]
+    other_age = comp_df[comp_df["흡연상태_구분"] == "나머지 (응답 있음)"]["age"]
+    total_age = comp_df["age"]
+
+    # 요약 통계 비교표
+    age_compare_df = pd.DataFrame({
+        "구분": ["전체", "Unknown (미상)", "나머지 (응답 있음)"],
+        "인원수(명)": [len(total_age), len(unknown_age), len(other_age)],
+        "최솟값": [round(total_age.min(), 1), round(unknown_age.min(), 1) if len(unknown_age) > 0 else None, round(other_age.min(), 1) if len(other_age) > 0 else None],
+        "25% (Q1)": [round(total_age.quantile(0.25), 1), round(unknown_age.quantile(0.25), 1) if len(unknown_age) > 0 else None, round(other_age.quantile(0.25), 1) if len(other_age) > 0 else None],
+        "중앙값 (Median)": [round(total_age.median(), 1), round(unknown_age.median(), 1) if len(unknown_age) > 0 else None, round(other_age.median(), 1) if len(other_age) > 0 else None],
+        "평균 (Mean)": [round(total_age.mean(), 1), round(unknown_age.mean(), 1) if len(unknown_age) > 0 else None, round(other_age.mean(), 1) if len(other_age) > 0 else None],
+        "75% (Q3)": [round(total_age.quantile(0.75), 1), round(unknown_age.quantile(0.75), 1) if len(unknown_age) > 0 else None, round(other_age.quantile(0.75), 1) if len(other_age) > 0 else None],
+        "최댓값": [round(total_age.max(), 1), round(unknown_age.max(), 1) if len(unknown_age) > 0 else None, round(other_age.max(), 1) if len(other_age) > 0 else None]
+    })
+
+    st.markdown("**그룹별 나이(age) 요약 통계 비교표**")
+    st.table(age_compare_df)
+
+    # 색상으로 나눈 나이 히스토그램
+    st.markdown("**Unknown vs 나머지 그룹 나이(age) 분포 히스토그램**")
+    fig_age_comp = px.histogram(
+        comp_df,
+        x="age",
+        color="흡연상태_구분",
+        barmode="overlay",
+        nbins=30,
+        opacity=0.65,
+        color_discrete_map={
+            "Unknown (미상)": "#EF553B",
+            "나머지 (응답 있음)": "#636EFA"
+        },
+        labels={"age": "나이 (age)", "count": "인원수", "흡연상태_구분": "구분"},
+        title="smoking_status 'Unknown' vs 나머지 그룹의 나이 분포 비교"
+    )
+    fig_age_comp.update_layout(bargap=0.05)
+    st.plotly_chart(fig_age_comp, use_container_width=True)
+else:
+    st.warning("현재 데이터에 smoking_status 또는 age 열이 없습니다.")
