@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 
 st.set_page_config(page_title="안타 수와 팀 승률 데이터 탐색", layout="wide")
 
@@ -36,3 +37,31 @@ dtypes_df = pd.DataFrame({
     "자료형": df.dtypes.astype(str).values
 })
 st.table(dtypes_df)
+
+# 4. 열마다 빈 값(결측치) 개수 - 표 & Plotly 막대그래프
+st.subheader("4. 열마다 빈 값(결측치) 개수")
+
+missing_counts = df.isnull().sum()
+missing_df = pd.DataFrame({
+    "열 이름": missing_counts.index,
+    "빈 값 개수": missing_counts.values
+})
+
+left_col, right_col = st.columns([1, 2])
+
+with left_col:
+    st.markdown("**열별 빈 값 개수 표**")
+    st.table(missing_df)
+
+with right_col:
+    st.markdown("**열별 빈 값 개수 막대그래프**")
+    fig = px.bar(
+        missing_df,
+        x="열 이름",
+        y="빈 값 개수",
+        text="빈 값 개수",
+        title="열별 빈 값(결측치) 현황"
+    )
+    fig.update_traces(textposition="outside")
+    fig.update_yaxes(rangemode="tozero", dtick=1)
+    st.plotly_chart(fig, use_container_width=True)
