@@ -6,12 +6,12 @@ import io
 st.set_page_config(page_title="데이터 초기 탐색 및 분포 확인", layout="wide")
 
 st.title("📊 데이터 초기 탐색 대시보드")
-st.caption("UTF-8 CSV 파일 기본 정보, 결측치 현황 및 숫자 열 분포 탐색")
+st.caption("UTF-8 CSV 파일 기본 정보, 결측치 현황, 숫자 열 및 글자 열 분포 탐색")
 
 # 1. CSV 파일 업로드 (UTF-8 인코딩)
 uploaded_file = st.file_uploader("CSV 파일을 업로드하세요 (UTF-8 인코딩)", type=["csv"])
 
-# 파일 업로드 전에도 age, avg_glucose_level, bmi 히스토그램을 바로 확인할 수 있는 예시 데이터
+# 파일 업로드 전에도 바로 확인할 수 있는 예시 데이터
 sample_csv = """id,gender,age,hypertension,heart_disease,ever_married,work_type,Residence_type,avg_glucose_level,bmi,smoking_status,stroke
 9046,Male,67.0,0,1,Yes,Private,Urban,228.69,36.6,formerly smoked,1
 51676,Female,61.0,0,0,Yes,Self-employed,Rural,202.21,,never smoked,1
@@ -88,23 +88,20 @@ st.divider()
 # 5. 숫자 열 분포(히스토그램) 및 요약 통계
 st.subheader("5. 숫자 열 분포(히스토그램) 및 요약 통계")
 
-target_cols = ["age", "avg_glucose_level", "bmi"]
-available_cols = [c for c in target_cols if c in df.columns]
+num_target_cols = ["age", "avg_glucose_level", "bmi"]
+available_num_cols = [c for c in num_target_cols if c in df.columns]
 
-if available_cols:
-    selected_col = st.selectbox("분포를 확인할 숫자 열을 선택하세요", available_cols)
+if available_num_cols:
+    selected_num_col = st.selectbox("분포를 확인할 숫자 열을 선택하세요", available_num_cols)
 
-    # 숫자형 변환 후 빈 값 제외
-    series = pd.to_numeric(df[selected_col], errors="coerce").dropna()
+    series = pd.to_numeric(df[selected_num_col], errors="coerce").dropna()
 
-    # 요약 통계 지표 카드 (최솟값, 평균, 중앙값, 최댓값)
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("최솟값 (Min)", f"{series.min():.2f}")
     m2.metric("평균 (Mean)", f"{series.mean():.2f}")
     m3.metric("중앙값 (Median)", f"{series.median():.2f}")
     m4.metric("최댓값 (Max)", f"{series.max():.2f}")
 
-    # 상세 요약 통계 표
     summary_df = pd.DataFrame({
         "통계 항목": ["유효 데이터 수", "최솟값 (min)", "25% (Q1)", "중앙값 (50%)", "평균 (mean)", "75% (Q3)", "최댓값 (max)", "표준편차 (std)"],
         "값": [
@@ -122,19 +119,63 @@ if available_cols:
     stat_col, hist_col = st.columns([1, 2])
 
     with stat_col:
-        st.markdown(f"**`{selected_col}` 요약 통계**")
+        st.markdown(f"**`{selected_num_col}` 요약 통계**")
         st.table(summary_df)
 
     with hist_col:
-        st.markdown(f"**`{selected_col}` 히스토그램**")
+        st.markdown(f"**`{selected_num_col}` 히스토그램**")
         fig_hist = px.histogram(
             df,
-            x=selected_col,
+            x=selected_num_col,
             nbins=20,
-            title=f"{selected_col} 값 분포 히스토그램",
-            labels={selected_col: selected_col, "count": "빈도수(행 개수)"}
+            title=f"{selected_num_col} 값 분포 히스토그램",
+            labels={selected_num_col: selected_num_col, "count": "빈도수(행 개수)"}
         )
         fig_hist.update_layout(bargap=0.05)
         st.plotly_chart(fig_hist, use_container_width=True)
 else:
-    st.warning("현재 데이터에 age, avg_glucose_level, bmi 열이 없습니다. 해당 열이 포함된 CSV 파일을 업로드해 주세요.")
+    st.warning("현재 데이터에 age, avg_glucose_level, bmi 열이 없습니다.")
+
+st.divider()
+
+# 6. 글자 열(범주형) 값별 개수 확인
+st.subheader("6. 글자 열(`gender`, `smoking_status`, `work_type`) 값별 개수")
+
+cat_target_cols = ["gender", "smoking_status", "work_type"]
+available_cat_cols = [c for c in cat_target_cols if c in df.columns]
+
+if available_cat_cols:
+    selected_cat_col = st.selectbox("값별 개수를 확인할 글자 열을 선택하세요", available_cat_cols)
+
+    # 결측치 포함 여부까지 한눈에 보이도록 value_counts(dropna=False) 사용
+    counts = df[selected_cat_col].fillna("빈 값(NaN)").value_counts()
+    ratios = (counts / len(df) * 100).round(1)
+
+    cat_df = pd.DataFrame({
+        "항목 값": counts.index.astype(str),
+        "개수": counts.values,
+        "비율(%)": ratios.values
+    })
+
+    cat_left, cat_right = st.columns([1, 2])
+
+    with cat_left:
+        st.markdown(f"**`{selected_cat_col}` 항목별 개수 표**")
+        st.table(cat_df)
+
+    with cat_right:
+        st.markdown(f"**`{selected_cat_col}` 항목별 개수 막대그래프**")
+        fig_cat = px.bar(
+            cat_df,
+            x="항목 값",
+            y="개수",
+            text="개수",
+            color="항목 값",
+            title=f"{selected_cat_col} 값별 개수 분포"
+        )
+        fig_cat.update_traces(textposition="outside")
+        fig_cat.update_yaxes(rangemode="tozero", dtick=1)
+        fig_cat.update_layout(showlegend=False)
+        st.plotly_chart(fig_cat, use_container_width=True)
+else:
+    st.warning("현재 데이터에 gender, smoking_status, work_type 열이 없습니다.")
